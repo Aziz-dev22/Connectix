@@ -1,1 +1,183 @@
+/* پنل مدیریت Connectix VPN Bot — تم تیره‌ی شیشه‌ای با گرادینت بنفش/فیروزه‌ای */
 
+:root {
+  --bg-0: #0A0E1A;
+  --bg-1: #10152A;
+  --bg-grad: radial-gradient(1200px 600px at 10% -10%, rgba(124,92,255,.25), transparent 60%),
+             radial-gradient(900px 500px at 100% 0%, rgba(45,212,191,.18), transparent 55%),
+             var(--bg-0);
+  --panel: rgba(255,255,255,0.035);
+  --panel-border: rgba(255,255,255,0.09);
+  --panel-raised: rgba(255,255,255,0.06);
+  --text: #F1F3FA;
+  --muted: #9AA3B8;
+  --accent: #7C5CFF;
+  --accent-2: #2DD4BF;
+  --accent-text: #fff;
+  --danger: #FB7185;
+  --ok: #34D399;
+  --warn: #FBBF24;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, "Vazirmatn", "IRANSans", sans-serif;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg-grad);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: var(--sans);
+  margin: 0;
+  direction: rtl;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent-2); text-decoration: none; transition: color .15s; }
+a:hover { color: var(--accent); }
+
+header.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--panel-border);
+  background: linear-gradient(180deg, rgba(124,92,255,.12), transparent);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header.topbar .brand {
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+header.topbar .brand::before {
+  content: "⚡";
+  font-size: 18px;
+}
+header.topbar .brand small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 11px;
+  font-family: var(--mono);
+}
+header.topbar nav a {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--panel-border);
+  margin-inline-start: 6px;
+}
+header.topbar nav a:hover { background: var(--panel-raised); }
+
+main { max-width: 1020px; margin: 0 auto; padding: 32px 20px 70px; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  margin-bottom: 22px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 30px -15px rgba(0,0,0,.5);
+}
+
+.panel h2, .panel h3 {
+  margin-top: 0;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+.panel h2 { font-size: 19px; }
+.panel h3 { font-size: 15.5px; color: var(--text); }
+
+.stat-row { display: flex; gap: 16px; margin-bottom: 22px; }
+.stat {
+  flex: 1;
+  background: linear-gradient(145deg, rgba(124,92,255,.14), rgba(45,212,191,.07));
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.stat .num { font-family: var(--mono); font-size: 26px; font-weight: 800; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.stat .label { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: right; padding: 10px 12px; border-bottom: 1px solid var(--panel-border); }
+th { color: var(--muted); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+td.mono, th.mono { font-family: var(--mono); direction: ltr; text-align: left; }
+
+.tree-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 10px 2px; border-bottom: 1px solid var(--panel-border); }
+.tree-row:last-child { border-bottom: none; }
+.tree-indent { color: var(--muted); font-family: var(--mono); }
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  color: var(--muted);
+  margin-inline-start: 6px;
+  background: rgba(255,255,255,0.03);
+}
+.badge.ok { color: var(--ok); border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.08); }
+.badge.off { color: var(--danger); border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.08); }
+.badge.warn { color: var(--warn); border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.08); }
+
+form.inline { display: inline; }
+
+button, input[type=submit] {
+  background: linear-gradient(135deg, var(--accent), #5B3FE0);
+  color: var(--accent-text);
+  border: none;
+  padding: 9px 18px;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13.5px;
+  transition: transform .1s, box-shadow .15s;
+  box-shadow: 0 6px 18px -8px rgba(124,92,255,.7);
+}
+button:hover { transform: translateY(-1px); box-shadow: 0 10px 22px -8px rgba(124,92,255,.85); }
+button:active { transform: translateY(0); }
+button.secondary {
+  background: var(--panel-raised);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  box-shadow: none;
+}
+button.danger { background: linear-gradient(135deg, var(--danger), #e1435f); box-shadow: 0 6px 18px -8px rgba(251,113,133,.6); }
+
+input[type=text], input[type=password], input[type=number], select {
+  background: rgba(0,0,0,.25);
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-family: var(--mono);
+  width: 100%;
+  outline: none;
+  transition: border-color .15s;
+}
+input:focus, select:focus { border-color: var(--accent); }
+label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; margin-top: 12px; font-weight: 600; }
+
+.login-wrap { max-width: 360px; margin: 100px auto; }
+.error-msg { color: var(--danger); font-size: 13px; margin-top: 10px; }
+.muted { color: var(--muted); }
+.kv { font-family: var(--mono); direction: ltr; text-align: left; word-break: break-all; font-size: 12.5px; }
+
+.checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.checkbox-row input[type=checkbox] { width: 18px; height: 18px; }
+.checkbox-row label { margin: 0; }
