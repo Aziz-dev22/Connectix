@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}{{ bot.label }}{% endblock %}
+{% block content %}
+
+<p><a href="/admin">&rarr; بازگشت به داشبورد</a></p>
+
+<div class="panel">
+  <h2>{{ bot.label }}
+    <span class="badge {{ 'ok' if bot.is_active else 'off' }}">{{ 'فعال' if bot.is_active else 'غیرفعال' }}</span>
+  </h2>
+
+  <table>
+    <tr><th>شناسه داخلی</th><td class="kv">#{{ bot.id }}</td></tr>
+    <tr><th>ربات والد</th><td>{% if parent %}<a href="/admin/bots/{{ parent.id }}">{{ parent.label }}</a>{% else %}— (ریشه) —{% endif %}</td></tr>
+    <tr><th>توکن ربات تلگرام</th><td class="kv">{{ bot.telegram_token }}</td></tr>
+    <tr><th>آیدی ادمین تلگرام</th><td class="kv">{{ bot.telegram_admin_id }}</td></tr>
+    <tr><th>API Key (برای bot_client)</th><td class="kv">{{ bot.api_key }}</td></tr>
+    <tr><th>حالت میزبانی</th><td>{{ 'سرور مرکزی' if bot.hosting_mode == 'central' else 'سرور شخصی نماینده' }}</td></tr>
+    {% if bot.parent_bot_id %}
+    <tr><th>موجودی کیف‌پول نزد والد</th><td class="kv">{{ "%.0f"|format(bot.wallet_balance) }}</td></tr>
+    {% endif %}
+  </table>
+
+  <div style="margin-top:14px; display:flex; gap:10px;">
+    <form class="inline" method="post" action="/admin/bots/{{ bot.id }}/toggle-active">
+      <button class="secondary" type="submit">{{ 'غیرفعال کردن ربات' if bot.is_active else 'فعال کردن ربات' }}</button>
+    </form>
+    <form class="inline" method="post" action="/admin/bots/{{ bot.id }}/toggle-sub-reseller">
+      <button class="secondary" type="submit">
+        {{ 'خاموش کردن اجازه‌ی ساخت زیرنماینده' if bot.can_create_sub_reseller else 'روشن کردن اجازه‌ی ساخت زیرنماینده' }}
+      </button>
+    </form>
+  </div>
+</div>
+
+{% if bot.parent_bot_id %}
+<div class="panel">
+  <h3>اصلاح دستی کیف‌پول</h3>
+  <form method="post" action="/admin/bots/{{ bot.id }}/wallet/adjust">
+    <label>مبلغ (مثبت = شارژ، منفی = کسر)</label>
+    <input type="number" step="1" name="amount" required>
+    <label>یادداشت</label>
+    <input type="text" name="note" placeholder="مثلاً: واریز نقدی بابت شارژ">
+    <div style="margin-top:10px;"><button type="submit">ثبت</button></div>
+  </form>
+  <table style="margin-top:16px;">
+    <tr><th>تاریخ</th><th>مبلغ</th><th>نوع</th><th>یادداشت</th></tr>
+    {% for tx in wallet_txs %}
+    <tr>
+      <td class="mono">{{ tx.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td class="mono">{{ "%.0f"|format(tx.amount) }}</td>
+      <td>{{ tx.type }}</td>
+      <td>{{ tx.note }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<div class="panel">
+  <h3>درگاه‌های پرداخت</h3>
+  <table>
+    <tr><th>روش</th><th>وضعیت</th><th>جزئیات</th></tr>
+    {% for pm in payment_methods %}
+    <tr>
+      <td>{{ pm.method }}</td>
+      <td><span class="badge {{ 'ok' if pm.enabled else 'off' }}">{{ 'روشن' if pm.enabled else 'خاموش' }}</span></td>
+      <td class="kv">{{ pm.details or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted" style="margin-top:8px;">روشن/خاموش کردن هر روش از داخل خودِ ربات (توسط ادمین همان ربات) انجام می‌شود.</p>
+</div>
+
+<div class="panel">
+  <h3>قیمت‌گذاری پلن‌ها</h3>
+  <table>
+    <tr><th>پلن</th><th>قیمت تمام‌شده</th><th>قیمت فروش</th><th>عرضه می‌شود؟</th></tr>
+    {% for pp, plan in pricing_rows %}
+    <tr>
+      <td>{{ plan.title }}</td>
+      <td class="mono">{{ "%.0f"|format(pp.cost_price) }}</td>
+      <td class="mono">{{ "%.0f"|format(pp.sell_price) }}</td>
+      <td><span class="badge {{ 'ok' if pp.is_offered else 'off' }}">{{ 'بله' if pp.is_offered else 'خیر' }}</span></td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted" style="margin-top:8px;">تعیین قیمت فروش و روشن/خاموش کردن عرضه‌ی هر پلن، از داخل خودِ ربات (توسط ادمین همان ربات) انجام می‌شود.</p>
+</div>
+
+{% if children %}
+<div class="panel">
+  <h3>زیرنماینده‌های مستقیم</h3>
+  <table>
+    <tr><th>برچسب</th><th>وضعیت</th><th>موجودی کیف‌پول</th></tr>
+    {% for c in children %}
+    <tr>
+      <td><a href="/admin/bots/{{ c.id }}">{{ c.label }}</a></td>
+      <td><span class="badge {{ 'ok' if c.is_active else 'off' }}">{{ 'فعال' if c.is_active else 'غیرفعال' }}</span></td>
+      <td class="mono">{{ "%.0f"|format(c.wallet_balance) }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<div class="panel">
+  <h3>آخرین سفارش‌ها</h3>
+  <table>
+    <tr><th>شناسه</th><th>پلن</th><th>قیمت فروش</th><th>وضعیت</th><th>تاریخ</th></tr>
+    {% for o in orders %}
+    <tr>
+      <td class="mono">#{{ o.id }}</td>
+      <td class="kv">{{ o.plan_id[:8] }}…</td>
+      <td class="mono">{{ "%.0f"|format(o.sell_price) }}</td>
+      <td>{{ o.status }}</td>
+      <td class="mono">{{ o.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">سفارشی ثبت نشده.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="panel">
+  <h3>تنظیمات ربات</h3>
+  <form method="post" action="/admin/bots/{{ bot.id }}/settings">
+    <label>آیدی کانال اجباری (مثل @mychannel)</label>
+    <input type="text" name="forced_channel" value="{{ bot.forced_channel }}">
+    <div class="checkbox-row">
+      <input type="checkbox" id="fc_enabled" name="forced_channel_enabled" value="1" {{ 'checked' if bot.forced_channel_enabled else '' }}>
+      <label for="fc_enabled" style="margin:0;">عضویت اجباری در کانال فعال باشد</label>
+    </div>
+    <label>مبلغ پاداش رفرال (تومان، به ازای اولین خرید هر زیرمجموعه)</label>
+    <input type="number" step="1" name="referral_bonus_amount" value="{{ "%.0f"|format(bot.referral_bonus_amount) }}">
+    <label>متن تماس پشتیبانی (مثل @AdminSupport)</label>
+    <input type="text" name="support_contact" value="{{ bot.support_contact }}">
+    <div style="margin-top:14px;"><button type="submit">ذخیره‌ی تنظیمات</button></div>
+  </form>
+</div>
+
+{% if pending_requests %}
+<div class="panel">
+  <h3>درخواست‌های نمایندگی در انتظار</h3>
+  <table>
+    <tr><th>آیدی تلگرام</th><th>تاریخ</th><th></th></tr>
+    {% for r in pending_requests %}
+    <tr>
+      <td class="mono">{{ r.telegram_id }}</td>
+      <td class="mono">{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td>
+        <form class="inline" method="post" action="/admin/bots/{{ bot.id }}/reseller-requests/{{ r.id }}/approve">
+          <button type="submit">تایید</button>
+        </form>
+        <form class="inline" method="post" action="/admin/bots/{{ bot.id }}/reseller-requests/{{ r.id }}/reject">
+          <button class="danger" type="submit">رد</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<div class="panel">
+  <h3>کاربران این ربات ({{ customers|length }} نفر)</h3>
+  <table>
+    <tr><th>نام/یوزرنیم</th><th>آیدی تلگرام</th><th>کیف‌پول</th><th>تست</th><th>وضعیت</th><th></th></tr>
+    {% for c in customers[:50] %}
+    <tr>
+      <td>{{ c.name or c.telegram_username or '—' }}</td>
+      <td class="mono">{{ c.telegram_id }}</td>
+      <td class="mono">{{ "%.0f"|format(c.wallet_balance) }}</td>
+      <td>{{ 'بله' if c.used_trial else 'خیر' }}</td>
+      <td><span class="badge {{ 'off' if c.is_blocked else 'ok' }}">{{ 'مسدود' if c.is_blocked else 'فعال' }}</span></td>
+      <td>
+        <form class="inline" method="post" action="/admin/bots/{{ bot.id }}/customers/{{ c.id }}/toggle-block">
+          <button class="secondary" type="submit">{{ 'رفع مسدودی' if c.is_blocked else 'مسدودسازی' }}</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">کاربری ثبت نشده.</td></tr>
+    {% endfor %}
+  </table>
+  {% if customers|length > 50 %}
+  <p class="muted" style="margin-top:8px;">فقط ۵۰ کاربر اول نمایش داده می‌شود.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

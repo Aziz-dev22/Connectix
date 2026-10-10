@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}ورود{% endblock %}
+{% block content %}
+<div class="login-wrap panel">
+  <h2>ورود ادمین اصلی</h2>
+  <form method="post" action="/admin/login">
+    <label>نام کاربری</label>
+    <input type="text" name="username" required>
+    <label>رمز عبور</label>
+    <input type="password" name="password" required>
+    <div style="margin-top:16px;">
+      <button type="submit">ورود</button>
+    </div>
+    {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+  </form>
+</div>
+{% endblock %}

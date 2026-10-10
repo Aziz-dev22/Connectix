@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}داشبورد{% endblock %}
+{% block content %}
+
+<div class="stat-row">
+  <div class="stat"><div class="num">{{ total_bots }}</div><div class="label">تعداد کل ربات‌ها (اصلی + نماینده‌ها)</div></div>
+  <div class="stat"><div class="num">{{ total_orders }}</div><div class="label">تعداد کل سفارش‌ها</div></div>
+</div>
+
+<div class="panel">
+  <h2>درخت ربات‌ها و نمایندگی‌ها</h2>
+  {% for row in tree %}
+  <div class="tree-row">
+    <span class="tree-indent">{{ '— ' * row.depth }}</span>
+    <a href="/admin/bots/{{ row.bot.id }}"><strong>{{ row.bot.label }}</strong></a>
+    <span class="badge {{ 'ok' if row.bot.is_active else 'off' }}">{{ 'فعال' if row.bot.is_active else 'غیرفعال' }}</span>
+    <span class="badge {{ 'ok' if row.bot.can_create_sub_reseller else '' }}">
+      {{ 'اجازه‌ی زیرنماینده: دارد' if row.bot.can_create_sub_reseller else 'اجازه‌ی زیرنماینده: ندارد' }}
+    </span>
+    <span class="badge">{{ 'میزبانی مرکزی' if row.bot.hosting_mode == 'central' else 'میزبانی شخصی' }}</span>
+    {% if row.bot.parent_bot_id %}
+    <span class="muted" style="font-size:12px; margin-inline-start:8px;">کیف‌پول: {{ "%.0f"|format(row.bot.wallet_balance) }}</span>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="muted">هنوز هیچ رباتی ثبت نشده است.</p>
+  {% endfor %}
+</div>
+
+<div class="panel">
+  <h3>ساخت ربات جدید (ریشه یا نماینده)</h3>
+  <form method="post" action="/admin/bots/new">
+    <label>برچسب/نام نمایشی</label>
+    <input type="text" name="label" placeholder="مثلاً: ربات اصلی، نماینده تهران">
+    <label>توکن ربات تلگرام</label>
+    <input type="text" name="telegram_token" required>
+    <label>آیدی عددی تلگرام ادمین (در صورت چند ادمین، با , جدا کنید)</label>
+    <input type="text" name="telegram_admin_id" required>
+    <label>ربات والد (اختیاری — برای ساخت زیرمجموعه‌ی یک نماینده)</label>
+    <select name="parent_bot_id" style="width:100%; padding:7px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:4px; font-family:var(--mono);">
+      <option value="">— بدون والد (ربات ریشه) —</option>
+      {% for row in tree %}
+      <option value="{{ row.bot.id }}">{{ row.bot.label }}</option>
+      {% endfor %}
+    </select>
+    <div style="margin-top:14px;">
+      <button type="submit">ساخت ربات</button>
+    </div>
+  </form>
+</div>
+
+<div class="panel">
+  <h3>همگام‌سازی پلن‌ها</h3>
+  <p class="muted">لیست پلن‌های فعال را از Connectix می‌خواند و برای همه‌ی ربات‌ها ردیف قیمت‌گذاری اولیه می‌سازد.</p>
+  <form method="post" action="/admin/sync-plans">
+    <button type="submit">همگام‌سازی الان</button>
+  </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}پنل مدیریت{% endblock %} — Connectix VPN Bot</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">پنل مدیریت فروش VPN
+      <small>Connectix Reseller Platform</small>
+    </div>
+    {% if request.session.get('logged_in') %}
+    <nav>
+      <a href="/admin">داشبورد</a>
+      &nbsp;|&nbsp;
+      <a href="/admin/logout">خروج</a>
+    </nav>
+    {% endif %}
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
