@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}تأمین‌کننده{% endblock %}
+{% block content %}
+
+<div class="panel">
+  <h2>🔌 وضعیت تأمین‌کننده</h2>
+
+  <div class="stat-row">
+    <div class="stat {{ 'positive' if status_ok else '' }}">
+      <div class="num">{{ 'متصل ✅' if status_ok else 'قطع ❌' }}</div>
+      <div class="label">Connectix API</div>
+    </div>
+    <div class="stat">
+      <div class="num">{{ plan_count }}</div>
+      <div class="label">پلن فعال دریافت‌شده</div>
+    </div>
+    <div class="stat">
+      <div class="num">{{ last_sync.strftime('%Y-%m-%d %H:%M') if last_sync else '—' }}</div>
+      <div class="label">آخرین همگام‌سازی پلن‌ها</div>
+    </div>
+  </div>
+
+  {% if not status_ok %}
+  <div class="alert-box danger">⚠️ {{ message }}</div>
+  <p class="muted">معمولاً یعنی <code>CONNECTIX_API_TOKEN</code> در <code>.env</code> نامعتبر یا منقضی شده — یک توکن تازه از پنل Connectix (دکمه‌ی «ایجاد مجدد توکن») بگیرید.</p>
+  {% else %}
+  <div class="alert-box ok">✅ {{ message }}</div>
+  {% endif %}
+
+  <form method="post" action="/admin/sync-plans" style="margin-top:10px;">
+    <button type="submit">همگام‌سازی پلن‌ها الان</button>
+  </form>
+
+  <p class="muted" style="margin-top:18px;">
+    معماری این بخش طوری طراحی شده که در آینده بتوان تأمین‌کننده‌های دیگری (علاوه بر Connectix) هم اضافه کرد؛
+    فعلاً فقط Connectix متصل است.
+  </p>
+</div>
+
+{% endblock %}
