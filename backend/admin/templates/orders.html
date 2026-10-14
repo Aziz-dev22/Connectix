@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}سفارش‌ها{% endblock %}
+{% block content %}
+
+<div class="panel">
+  <h2>مدیریت سفارش‌ها</h2>
+  <form method="get" action="/admin/orders" class="filter-bar">
+    <div>
+      <label>ربات</label>
+      <select name="bot_id">
+        <option value="">همه‌ی ربات‌ها</option>
+        {% for b in bots %}
+        <option value="{{ b.id }}" {{ 'selected' if filter_bot_id == b.id|string else '' }}>{{ b.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>وضعیت</label>
+      <select name="status">
+        <option value="">همه‌ی وضعیت‌ها</option>
+        {% for s in statuses %}
+        <option value="{{ s.value }}" {{ 'selected' if filter_status == s.value else '' }}>{{ s.value }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>جست‌وجو (شناسه سفارش یا پلن)</label>
+      <input type="text" name="q" value="{{ filter_q }}">
+    </div>
+    <div style="flex:0;">
+      <button type="submit">فیلتر</button>
+    </div>
+  </form>
+  <p style="margin-top:4px;"><a href="/admin/orders/export.csv">⬇️ خروجی CSV همه‌ی سفارش‌ها</a></p>
+</div>
+
+<div class="panel">
+  <table>
+    <tr>
+      <th>شناسه</th><th>ربات</th><th>پلن</th><th>تمام‌شده</th><th>فروش</th>
+      <th>روش پرداخت</th><th>وضعیت</th><th>تاریخ ثبت</th><th>تاریخ تحویل</th>
+    </tr>
+    {% for o in orders %}
+    <tr>
+      <td class="mono">#{{ o.id }}</td>
+      <td>{{ bot_labels.get(o.bot_id, '—') }}</td>
+      <td class="kv">{{ o.plan_id[:8] }}…</td>
+      <td class="mono">{{ "%.0f"|format(o.cost_price) }}</td>
+      <td class="mono">{{ "%.0f"|format(o.sell_price) }}</td>
+      <td>{{ o.payment_method or '—' }}</td>
+      <td>
+        <span class="badge {{ 'ok' if o.status == 'fulfilled' else ('off' if o.status in ['failed','rejected'] else 'warn') }}">{{ o.status }}</span>
+        {% if o.status == 'failed' and o.failure_reason %}<div class="muted" style="font-size:11px; margin-top:4px;">{{ o.failure_reason }}</div>{% endif %}
+      </td>
+      <td class="mono">{{ o.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td class="mono">{{ o.fulfilled_at.strftime('%Y-%m-%d %H:%M') if o.fulfilled_at else '—' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" class="muted">سفارشی با این فیلتر یافت نشد.</td></tr>
+    {% endfor %}
+  </table>
+  <p class="muted" style="margin-top:10px;">حداکثر ۳۰۰ سفارش آخر نمایش داده می‌شود.</p>
+</div>
+
+{% endblock %}

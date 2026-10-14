@@ -60,32 +60,50 @@
 <div class="panel">
   <h3>درگاه‌های پرداخت</h3>
   <table>
-    <tr><th>روش</th><th>وضعیت</th><th>جزئیات</th></tr>
+    <tr><th>روش</th><th>وضعیت</th><th>جزئیات (شماره کارت/آدرس کیف‌پول)</th><th></th></tr>
     {% for pm in payment_methods %}
     <tr>
       <td>{{ pm.method }}</td>
       <td><span class="badge {{ 'ok' if pm.enabled else 'off' }}">{{ 'روشن' if pm.enabled else 'خاموش' }}</span></td>
-      <td class="kv">{{ pm.details or '—' }}</td>
+      <td>
+        <form class="inline-edit" method="post" action="/admin/bots/{{ bot.id }}/payment-methods/{{ pm.method }}/details">
+          <input type="text" name="details" value="{{ pm.details }}" class="kv" style="width:auto; min-width:160px;">
+          <button class="secondary small" type="submit">ذخیره</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" action="/admin/bots/{{ bot.id }}/payment-methods/{{ pm.method }}/toggle">
+          <button class="{{ 'secondary' if pm.enabled else '' }} small" type="submit">{{ 'خاموش کن' if pm.enabled else 'روشن کن' }}</button>
+        </form>
+      </td>
     </tr>
     {% endfor %}
   </table>
-  <p class="muted" style="margin-top:8px;">روشن/خاموش کردن هر روش از داخل خودِ ربات (توسط ادمین همان ربات) انجام می‌شود.</p>
 </div>
 
 <div class="panel">
   <h3>قیمت‌گذاری پلن‌ها</h3>
   <table>
-    <tr><th>پلن</th><th>قیمت تمام‌شده</th><th>قیمت فروش</th><th>عرضه می‌شود؟</th></tr>
+    <tr><th>پلن</th><th>قیمت تمام‌شده</th><th>قیمت فروش</th><th>عرضه می‌شود؟</th><th></th></tr>
     {% for pp, plan in pricing_rows %}
     <tr>
       <td>{{ plan.title }}</td>
       <td class="mono">{{ "%.0f"|format(pp.cost_price) }}</td>
-      <td class="mono">{{ "%.0f"|format(pp.sell_price) }}</td>
+      <td>
+        <form class="inline-edit" method="post" action="/admin/bots/{{ bot.id }}/plans/{{ plan.id }}/price">
+          <input type="number" step="1" name="sell_price" value="{{ "%.0f"|format(pp.sell_price) }}" style="width:110px;">
+          <button class="secondary small" type="submit">ذخیره</button>
+        </form>
+      </td>
       <td><span class="badge {{ 'ok' if pp.is_offered else 'off' }}">{{ 'بله' if pp.is_offered else 'خیر' }}</span></td>
+      <td>
+        <form method="post" action="/admin/bots/{{ bot.id }}/plans/{{ plan.id }}/toggle">
+          <button class="{{ 'secondary' if pp.is_offered else '' }} small" type="submit">{{ 'غیرفعال کن' if pp.is_offered else 'فعال کن' }}</button>
+        </form>
+      </td>
     </tr>
     {% endfor %}
   </table>
-  <p class="muted" style="margin-top:8px;">تعیین قیمت فروش و روشن/خاموش کردن عرضه‌ی هر پلن، از داخل خودِ ربات (توسط ادمین همان ربات) انجام می‌شود.</p>
 </div>
 
 {% if children %}
@@ -173,9 +191,13 @@
       <td class="mono">{{ "%.0f"|format(c.wallet_balance) }}</td>
       <td>{{ 'بله' if c.used_trial else 'خیر' }}</td>
       <td><span class="badge {{ 'off' if c.is_blocked else 'ok' }}">{{ 'مسدود' if c.is_blocked else 'فعال' }}</span></td>
-      <td>
+      <td style="display:flex; gap:6px; flex-wrap:wrap;">
         <form class="inline" method="post" action="/admin/bots/{{ bot.id }}/customers/{{ c.id }}/toggle-block">
-          <button class="secondary" type="submit">{{ 'رفع مسدودی' if c.is_blocked else 'مسدودسازی' }}</button>
+          <button class="secondary small" type="submit">{{ 'رفع مسدودی' if c.is_blocked else 'مسدودسازی' }}</button>
+        </form>
+        <form class="inline-edit" method="post" action="/admin/bots/{{ bot.id }}/customers/{{ c.id }}/wallet-adjust">
+          <input type="number" step="1" name="amount" placeholder="±مبلغ" style="width:90px;">
+          <button class="secondary small" type="submit">ثبت</button>
         </form>
       </td>
     </tr>

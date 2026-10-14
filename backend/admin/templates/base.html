@@ -11,15 +11,18 @@
       <small>Connectix Reseller Platform</small>
     </div>
     {% if request.session.get('logged_in') %}
-    <nav>
+    <nav class="topnav">
       <a href="/admin">داشبورد</a>
-      &nbsp;|&nbsp;
-      <a href="/admin/logout">خروج</a>
+      <a href="/admin/orders">سفارش‌ها</a>
+      <a href="/admin/broadcast">پیام همگانی</a>
+      <a href="/admin/suppliers">تأمین‌کننده</a>
+      <a href="/admin/logout" class="logout-link">خروج</a>
     </nav>
     {% endif %}
   </header>
   <main>
     {% block content %}{% endblock %}
   </main>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -2,9 +2,54 @@
 {% block title %}داشبورد{% endblock %}
 {% block content %}
 
+{% if stats.pending_receipts or stats.pending_reseller_requests %}
+<div class="alert-box">
+  ⚠️
+  {% if stats.pending_receipts %}<span>{{ stats.pending_receipts }} رسید در انتظار تایید</span>{% endif %}
+  {% if stats.pending_receipts and stats.pending_reseller_requests %} — {% endif %}
+  {% if stats.pending_reseller_requests %}<span>{{ stats.pending_reseller_requests }} درخواست نمایندگی در انتظار</span>{% endif %}
+  <span class="muted" style="margin-inline-start:auto; font-size:12px;">(از صفحه‌ی هر ربات قابل بررسی است)</span>
+</div>
+{% endif %}
+
 <div class="stat-row">
-  <div class="stat"><div class="num">{{ total_bots }}</div><div class="label">تعداد کل ربات‌ها (اصلی + نماینده‌ها)</div></div>
-  <div class="stat"><div class="num">{{ total_orders }}</div><div class="label">تعداد کل سفارش‌ها</div></div>
+  <div class="stat"><div class="num">{{ stats.active_bots }}/{{ stats.total_bots }}</div><div class="label">ربات‌های فعال از کل</div></div>
+  <div class="stat"><div class="num">{{ stats.total_resellers }}</div><div class="label">نماینده و زیرنماینده</div></div>
+  <div class="stat"><div class="num">{{ stats.total_customers }}</div><div class="label">کاربر/مشتری ثبت‌شده</div></div>
+  <div class="stat"><div class="num">{{ total_orders }}</div><div class="label">سفارش ثبت‌شده (کل)</div></div>
+</div>
+
+<div class="stat-row">
+  <div class="stat positive"><div class="num">{{ "%.0f"|format(stats.revenue_today) }}</div><div class="label">درآمد امروز (سود: {{ "%.0f"|format(stats.profit_today) }})</div></div>
+  <div class="stat positive"><div class="num">{{ "%.0f"|format(stats.revenue_week) }}</div><div class="label">درآمد این هفته (سود: {{ "%.0f"|format(stats.profit_week) }})</div></div>
+  <div class="stat positive"><div class="num">{{ "%.0f"|format(stats.revenue_month) }}</div><div class="label">درآمد این ماه (سود: {{ "%.0f"|format(stats.profit_month) }})</div></div>
+  <div class="stat"><div class="num">{{ "%.0f"|format(stats.total_wallet_balance) }}</div><div class="label">مجموع موجودی کیف‌پول نماینده‌ها</div></div>
+</div>
+
+<div class="chart-wrap">
+  <h3 style="margin-top:0;">روند فروش ۱۴ روز اخیر</h3>
+  <canvas id="salesChart"></canvas>
+</div>
+
+<div class="panel">
+  <h3>آخرین سفارش‌ها</h3>
+  <table>
+    <tr><th>شناسه</th><th>ربات</th><th>مبلغ فروش</th><th>وضعیت</th><th>تاریخ</th></tr>
+    {% for o in stats.recent_orders %}
+    <tr>
+      <td class="mono">#{{ o.id }}</td>
+      <td>{{ bot_labels.get(o.bot_id, '—') }}</td>
+      <td class="mono">{{ "%.0f"|format(o.sell_price) }}</td>
+      <td>
+        <span class="badge {{ 'ok' if o.status == 'fulfilled' else ('off' if o.status in ['failed','rejected'] else 'warn') }}">{{ o.status }}</span>
+      </td>
+      <td class="mono">{{ o.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">سفارشی ثبت نشده.</td></tr>
+    {% endfor %}
+  </table>
+  <p style="margin-top:10px;"><a href="/admin/orders">مشاهده‌ی همه‌ی سفارش‌ها و فیلتر پیشرفته ←</a></p>
 </div>
 
 <div class="panel">
@@ -37,7 +82,7 @@
     <label>آیدی عددی تلگرام ادمین (در صورت چند ادمین، با , جدا کنید)</label>
     <input type="text" name="telegram_admin_id" required>
     <label>ربات والد (اختیاری — برای ساخت زیرمجموعه‌ی یک نماینده)</label>
-    <select name="parent_bot_id" style="width:100%; padding:7px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:4px; font-family:var(--mono);">
+    <select name="parent_bot_id">
       <option value="">— بدون والد (ربات ریشه) —</option>
       {% for row in tree %}
       <option value="{{ row.bot.id }}">{{ row.bot.label }}</option>
@@ -57,4 +102,36 @@
   </form>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+const ctx = document.getElementById('salesChart');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: {{ stats.chart_labels | tojson }},
+    datasets: [{
+      label: 'درآمد (تومان)',
+      data: {{ stats.chart_revenue | tojson }},
+      borderColor: '#7C5CFF',
+      backgroundColor: 'rgba(124,92,255,.18)',
+      borderWidth: 2.5,
+      tension: 0.4,
+      fill: true,
+      pointRadius: 3,
+      pointBackgroundColor: '#4F8CFF',
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#9AA3B8', font: { family: 'monospace' } } } },
+    scales: {
+      x: { ticks: { color: '#9AA3B8' }, grid: { color: 'rgba(255,255,255,.05)' } },
+      y: { ticks: { color: '#9AA3B8' }, grid: { color: 'rgba(255,255,255,.05)' } },
+    }
+  }
+});
+</script>
 {% endblock %}
