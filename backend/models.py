@@ -92,7 +92,32 @@ class Bot(SQLModel, table=True):
     # پشتیبانی
     support_contact: str = Field(default="")  # مثلاً @AdminSupport یا شماره تماس (نمایشی)
 
+    # سطح نمایندگی (برچسب تجاری) + درصد تخفیف این سطح روی قیمت تمام‌شده
+    tier: str = Field(default="normal")  # normal | special | professional | enterprise
+    tier_discount_percent: float = Field(default=0)  # ۰ تا ۱۰۰؛ روی قیمت فروش والد اعمال می‌شود
+
+    # سقف تعداد زیرنماینده‌ای که این ربات مجاز به ساختن آن است (خالی/None = نامحدود)
+    max_sub_bots: Optional[int] = Field(default=None)
+
+    # سقف اعتبار (بدهی مجاز): موجودی کیف‌پول این ربات می‌تواند تا این مقدار منفی شود
+    credit_limit: float = Field(default=0)
+
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class BotTier(str, Enum):
+    NORMAL = "normal"
+    SPECIAL = "special"
+    PROFESSIONAL = "professional"
+    ENTERPRISE = "enterprise"
+
+
+TIER_LABELS_FA = {
+    "normal": "عادی",
+    "special": "ویژه",
+    "professional": "حرفه‌ای",
+    "enterprise": "سازمانی",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -266,3 +291,57 @@ class ResellerRequest(SQLModel, table=True):
     status: ResellerRequestStatus = Field(default=ResellerRequestStatus.PENDING)
     created_at: datetime = Field(default_factory=utcnow)
     reviewed_at: Optional[datetime] = None
+
+
+# ---------------------------------------------------------------------------
+# AdminUser — حساب‌های ورود به پنل تحت وب (چندکاربره، با نقش)
+# ---------------------------------------------------------------------------
+class AdminRole(str, Enum):
+    SUPER_ADMIN = "super_admin"    # دسترسی کامل، از جمله مالی و ساخت ربات
+    FINANCE = "finance"            # کیف‌پول، تایید رسید، گزارش مالی
+    SUPPORT = "support"            # مشاهده‌ی کاربران/سفارش‌ها، بدون تغییرات مالی
+    VIEWER = "viewer"              # فقط مشاهده
+
+
+class AdminUser(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(index=True, unique=True)
+    password_hash: str
+    role: AdminRole = Field(default=AdminRole.SUPER_ADMIN)
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+# ---------------------------------------------------------------------------
+# AdminActionLog — لاگ حسابرسیِ عملیات مهم مدیریتی/مالی (قابل‌حذف نیست)
+# ---------------------------------------------------------------------------
+class AdminActionLog(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    actor: str  # مثل "web:aziz" یا "bot:123456789"
+    action: str  # مثل "wallet_adjust", "bot_create", "receipt_approve"
+    bot_id: Optional[int] = Field(default=None, foreign_key="bot.id")
+    detail: str = Field(default="")
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+# ---------------------------------------------------------------------------
+# ScheduledBroadcast — پیام همگانیِ زمان‌بندی‌شده برای ارسال در آینده
+# ---------------------------------------------------------------------------
+class ScheduledBroadcastStatus(str, Enum):
+    PENDING = "pending"
+    SENT = "sent"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class ScheduledBroadcast(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    bot_id: int = Field(foreign_key="bot.id", index=True)
+    message: str
+    send_at: datetime = Field(index=True)  # زمان ارسال، به وقت UTC
+    status: ScheduledBroadcastStatus = Field(default=ScheduledBroadcastStatus.PENDING)
+    created_by: str = Field(default="")
+    created_at: datetime = Field(default_factory=utcnow)
+    sent_at: Optional[datetime] = None
+    sent_count: int = Field(default=0)
+    failed_count: int = Field(default=0)
