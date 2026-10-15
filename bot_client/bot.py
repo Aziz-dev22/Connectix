@@ -356,16 +356,23 @@ async def cb_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # نمایندگی (درخواست / ساخت ربات نمایندگی)
 # ---------------------------------------------------------------------------
 async def cb_reseller_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    api = get_api(context)
     q = update.callback_query
     await q.answer()
-    rows = [
-        [InlineKeyboardButton("🛠 ساخت ربات نمایندگی", callback_data="admin_create_subbot")],
-        [InlineKeyboardButton("📝 درخواست نمایندگی", callback_data="reseller_request")],
-    ]
-    await q.edit_message_text(
-        "برای ساخت ربات نمایندگی باید مجوز داشته باشید. اگر هنوز ندارید، اول درخواست بدهید:",
-        reply_markup=kb(rows),
-    )
+    user = update.effective_user
+    status = await api.my_reseller_status(str(user.id))
+
+    rows = []
+    if status["can_create"]:
+        rows.append([InlineKeyboardButton("🛠 ساخت ربات نمایندگی", callback_data="admin_create_subbot")])
+        text = "شما اجازه‌ی ساخت ربات نمایندگی را دارید:"
+    elif status["has_pending_request"]:
+        text = "درخواست نمایندگی شما ثبت شده و در انتظار بررسی ادمین است."
+    else:
+        rows.append([InlineKeyboardButton("📝 درخواست نمایندگی", callback_data="reseller_request")])
+        text = "برای ساخت ربات نمایندگی باید مجوز داشته باشید. برای درخواست مجوز، دکمه‌ی زیر را بزنید:"
+
+    await q.edit_message_text(text, reply_markup=kb(rows))
 
 
 async def cb_reseller_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -418,34 +425,66 @@ async def cmd_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------------------------------------------------------------------
 # ورودی‌های عکس (رسید پرداخت سفارش، شارژ کیف‌پول نماینده، شارژ کیف‌پول مشتری، پشتیبانی)
 # ---------------------------------------------------------------------------
+async def notify_admins_of_receipt(context: ContextTypes.DEFAULT_TYPE, receipt_id, caption: str, file_id: str):
+    """بلافاصله بعد از ثبت هر رسید، عکس آن را با دکمه‌ی تایید/رد مستقیم برای همه‌ی
+    ادمین‌های این ربات می‌فرستد — به‌جای این‌که منتظر بمانند تا خودشان منوی
+    «رسیدهای در انتظار» را باز کنند."""
+    api = get_api(context)
+    info = await api.bot_info()
+    kb_markup = InlineKeyboardMarkup([[
+        InlineKeyboardButton("✅ تایید", callback_data=f"rcpt_ok:{receipt_id}"),
+        InlineKeyboardButton("❌ رد", callback_data=f"rcpt_no:{receipt_id}"),
+    ]])
+    for admin_id in info["admin_ids"]:
+        try:
+            await context.bot.send_photo(chat_id=int(admin_id), photo=file_id, caption=caption, reply_markup=kb_markup)
+        except (TelegramError, ValueError):
+            pass
+
+
 async def on_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     flow = context.user_data.get("flow")
     api = get_api(context)
     file_id = update.message.photo[-1].file_id
+    user = update.effective_user
 
     if not flow:
         return
 
     if flow.startswith("await_receipt_photo:"):
         order_id = int(flow.split(":", 1)[1])
-        await api.submit_order_receipt(order_id, file_id)
+        result = await api.submit_order_receipt(order_id, file_id)
         context.user_data["flow"] = None
         await update.message.reply_text("رسید دریافت شد ✅ در انتظار تایید ادمین هستید.", reply_markup=kb([]))
+        await notify_admins_of_receipt(
+            context, result["receipt_id"],
+            f"🧾 رسید جدید برای سفارش #{order_id}\nاز: {user.full_name} (ID: {user.id})",
+            file_id,
+        )
         return
 
     if flow.startswith("await_wallet_topup_photo:"):
         amount = float(flow.split(":", 1)[1])
-        await api.request_wallet_topup(amount, file_id)
+        result = await api.request_wallet_topup(amount, file_id)
         context.user_data["flow"] = None
         await update.message.reply_text("درخواست شارژ کیف‌پول ثبت شد ✅ در انتظار تایید است.", reply_markup=kb([]))
+        await notify_admins_of_receipt(
+            context, result["receipt_id"],
+            f"🧾 درخواست شارژ کیف‌پول نمایندگی به مبلغ {amount:,.0f}\nاز: {user.full_name} (ID: {user.id})",
+            file_id,
+        )
         return
 
     if flow.startswith("await_customer_topup_photo:"):
         amount = float(flow.split(":", 1)[1])
-        user = update.effective_user
-        await api.request_customer_wallet_topup(str(user.id), amount, file_id)
+        result = await api.request_customer_wallet_topup(str(user.id), amount, file_id)
         context.user_data["flow"] = None
         await update.message.reply_text("درخواست شارژ کیف‌پول ثبت شد ✅ در انتظار تایید ادمین است.", reply_markup=kb([]))
+        await notify_admins_of_receipt(
+            context, result["receipt_id"],
+            f"🧾 درخواست شارژ کیف‌پول مشتری به مبلغ {amount:,.0f}\nاز: {user.full_name} (ID: {user.id})",
+            file_id,
+        )
         return
 
     if flow == "support_chat":
@@ -485,7 +524,9 @@ async def cb_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     if info["has_parent"]:
         rows.append([InlineKeyboardButton("💳 شارژ کیف‌پول من", callback_data="admin_wallet_topup")])
-    rows.append([InlineKeyboardButton("🤝 ساخت ربات نمایندگی", callback_data="admin_create_subbot")])
+    my_status = await api.my_reseller_status(str(user.id))
+    if my_status["can_create"]:
+        rows.append([InlineKeyboardButton("🤝 ساخت ربات نمایندگی", callback_data="admin_create_subbot")])
     await q.edit_message_text("پنل مدیریت:", reply_markup=kb(rows))
 
 
@@ -497,37 +538,28 @@ async def cb_admin_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
     plans = await api.list_all_plans_for_admin(str(user.id))
     rows = []
     for p in plans:
-        mark = "✅" if p["is_offered"] else "❌"
+        mark = "✅ فعال" if p["is_offered"] else "❌ غیرفعال"
         rows.append([InlineKeyboardButton(
-            f"{mark} {p['title']} — تمام‌شده {p['cost_price']:,.0f} / فروش {p['sell_price']:,.0f}",
-            callback_data=f"adm_plan:{p['plan_id']}",
+            f"{p['title']} ({p['cost_price']:,.0f} ← {p['sell_price']:,.0f})", callback_data="noop"
         )])
+        rows.append([
+            InlineKeyboardButton(mark, callback_data=f"adm_toggleoffer2:{p['plan_id']}"),
+            InlineKeyboardButton("✏️ تغییر قیمت", callback_data=f"adm_setprice2:{p['plan_id']}"),
+        ])
     await q.edit_message_text(
-        "روی یک پلن بزنید تا قیمت فروش را تغییر دهید یا عرضه/عدم‌عرضه‌اش را عوض کنید:\n"
-        "(✅ یعنی هم‌اکنون به مشتری عرضه می‌شود)",
+        "مدیریت پلن‌ها (تمام‌شده ← فروش):",
         reply_markup=InlineKeyboardMarkup(rows + [[InlineKeyboardButton("⬅️ بازگشت", callback_data="admin_menu")]]),
     )
 
 
-async def cb_admin_select_plan(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    plan_id = q.data.split(":", 1)[1]
-    context.user_data["admin_plan_id"] = plan_id
-    rows = [
-        [InlineKeyboardButton("✏️ تغییر قیمت فروش", callback_data="adm_setprice")],
-        [InlineKeyboardButton("🔁 روشن/خاموش کردن عرضه", callback_data="adm_toggleoffer")],
-    ]
-    await q.edit_message_text(
-        "چه کاری می‌خواهید انجام دهید؟",
-        reply_markup=InlineKeyboardMarkup(rows + [[InlineKeyboardButton("⬅️ بازگشت", callback_data="admin_prices")]]),
-    )
+async def cb_noop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
 
 
 async def cb_admin_ask_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    plan_id = context.user_data.get("admin_plan_id")
+    plan_id = q.data.split(":", 1)[1]
     context.user_data["flow"] = f"await_set_price:{plan_id}"
     await q.edit_message_text(
         "قیمت فروش جدید را به تومان وارد کنید (فقط عدد؛ عدد ۰ یعنی رایگان):",
@@ -540,7 +572,7 @@ async def cb_admin_toggle_offer(update: Update, context: ContextTypes.DEFAULT_TY
     q = update.callback_query
     await q.answer()
     user = update.effective_user
-    plan_id = context.user_data.get("admin_plan_id")
+    plan_id = q.data.split(":", 1)[1]
     plans = await api.list_all_plans_for_admin(str(user.id))
     current = next((p for p in plans if p["plan_id"] == plan_id), None)
     if not current:
@@ -1003,9 +1035,9 @@ def build_application(telegram_token: str, api_key: str, backend_url: str) -> Ap
 
     application.add_handler(CallbackQueryHandler(cb_admin_menu, pattern="^admin_menu$"))
     application.add_handler(CallbackQueryHandler(cb_admin_prices, pattern="^admin_prices$"))
-    application.add_handler(CallbackQueryHandler(cb_admin_select_plan, pattern="^adm_plan:"))
-    application.add_handler(CallbackQueryHandler(cb_admin_ask_price, pattern="^adm_setprice$"))
-    application.add_handler(CallbackQueryHandler(cb_admin_toggle_offer, pattern="^adm_toggleoffer$"))
+    application.add_handler(CallbackQueryHandler(cb_noop, pattern="^noop$"))
+    application.add_handler(CallbackQueryHandler(cb_admin_ask_price, pattern="^adm_setprice2:"))
+    application.add_handler(CallbackQueryHandler(cb_admin_toggle_offer, pattern="^adm_toggleoffer2:"))
     application.add_handler(CallbackQueryHandler(cb_admin_payments, pattern="^admin_payments$"))
     application.add_handler(CallbackQueryHandler(cb_admin_toggle_payment, pattern="^adm_pm:"))
     application.add_handler(CallbackQueryHandler(cb_admin_receipts, pattern="^admin_receipts$"))

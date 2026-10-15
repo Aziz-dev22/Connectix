@@ -183,6 +183,9 @@ class BackendApiClient:
         return await self._request("GET", "/api/v1/referral/me", params={"telegram_id": telegram_id})
 
     # ---- reseller requests ----
+    async def my_reseller_status(self, telegram_id: str) -> dict:
+        return await self._request("GET", "/api/v1/reseller-requests/my-status", params={"telegram_id": telegram_id})
+
     async def create_reseller_request(self, telegram_id: str, note: str = "") -> dict:
         return await self._request(
             "POST", "/api/v1/reseller-requests", json={"telegram_id": telegram_id, "note": note}
