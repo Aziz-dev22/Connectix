@@ -23,6 +23,7 @@ from backend.services import receipts as receipts_service
 from backend.services import referral as referral_service
 from backend.services import reseller_requests as reseller_requests_service
 from backend.services.wallet import customer_topup, customer_deduct_for_purchase, InsufficientBalanceError
+from backend.services.audit import log_action
 from backend.models import CustomerWalletTxType
 
 router = APIRouter(prefix="/api/v1")
@@ -403,6 +404,7 @@ async def approve_receipt_endpoint(
         await receipts_service.approve_receipt(session, receipt, body.requesting_telegram_id)
     except Exception as e:
         raise HTTPException(500, f"خطا در پردازش تایید: {e}")
+    log_action(session, f"bot:{body.requesting_telegram_id}", "receipt_approve", bot_id=bot.id, detail=f"receipt_id={receipt_id}")
     return {"message": "تایید شد."}
 
 
@@ -444,6 +446,9 @@ async def create_sub_bot(
         )
     except hierarchy_service.PermissionDeniedError as e:
         raise HTTPException(403, str(e))
+    except hierarchy_service.SubBotLimitReachedError as e:
+        raise HTTPException(422, str(e))
+    log_action(session, f"bot:{body.requesting_telegram_id}", "bot_create", bot_id=new_bot.id, detail=f"parent={bot.id}")
     # ربات جدید را بلافاصله، بدون نیاز به ری‌استارت کل سیستم، در همین پروسه راه‌اندازی کن
     from backend.main import launch_bot_runtime  # import تاخیری برای جلوگیری از چرخه
     await launch_bot_runtime(new_bot)
@@ -617,6 +622,22 @@ def create_reseller_request(
         return {"message": "شما همین حالا هم اجازه‌ی ساخت ربات نمایندگی را دارید."}
     req = reseller_requests_service.create_request(session, bot, customer, body.note)
     return {"request_id": req.id, "status": req.status, "message": "درخواست شما ثبت شد و در انتظار بررسی ادمین است."}
+
+
+@router.get("/reseller-requests/my-status")
+def my_reseller_status(
+    telegram_id: str, bot: Bot = Depends(get_current_bot), session: Session = Depends(get_session)
+):
+    """آیا این کاربر همین الان اجازه‌ی ساخت ربات نمایندگی دارد؟ و آیا درخواست در انتظاری دارد؟"""
+    can_create = reseller_requests_service.has_permission(session, bot, telegram_id)
+    pending = session.exec(
+        select(ResellerRequest).where(
+            ResellerRequest.bot_id == bot.id,
+            ResellerRequest.telegram_id == telegram_id,
+            ResellerRequest.status == ResellerRequestStatus.PENDING,
+        )
+    ).first()
+    return {"can_create": can_create, "has_pending_request": pending is not None}
 
 
 @router.get("/reseller-requests/pending")
