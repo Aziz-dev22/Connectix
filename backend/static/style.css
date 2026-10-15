@@ -12,7 +12,7 @@
   --text: #F1F3FA;
   --muted: #9AA3B8;
   --accent: #7C5CFF;
-  --accent-2: #2DD4BF;
+  --accent-2: #4F8CFF;
   --accent-text: #fff;
   --danger: #FB7185;
   --ok: #34D399;
@@ -178,6 +178,65 @@ label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px
 .muted { color: var(--muted); }
 .kv { font-family: var(--mono); direction: ltr; text-align: left; word-break: break-all; font-size: 12.5px; }
 
+button.small { padding: 5px 11px; font-size: 12px; border-radius: 7px; }
+.inline-edit { display: inline-flex; gap: 6px; align-items: center; }
+.inline-edit input { width: auto; }
+
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 .checkbox-row input[type=checkbox] { width: 18px; height: 18px; }
 .checkbox-row label { margin: 0; }
+
+/* --- پس‌زمینه‌ی متحرک --- */
+body {
+  background: var(--bg-grad);
+  background-size: 200% 200%;
+  animation: bg-shift 18s ease-in-out infinite;
+}
+@keyframes bg-shift {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 100% 60%; }
+  100% { background-position: 0% 0%; }
+}
+
+.logout-link { color: var(--danger) !important; }
+
+.stat.positive .num { color: var(--ok); -webkit-text-fill-color: var(--ok); }
+.stat.negative .num { color: var(--danger); -webkit-text-fill-color: var(--danger); }
+
+.chart-wrap {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 22px;
+}
+.chart-wrap canvas { max-height: 280px; }
+
+.filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; align-items: flex-end; }
+.filter-bar > div { flex: 1; min-width: 140px; }
+.filter-bar label { margin-top: 0; }
+
+.alert-box {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-radius: var(--radius);
+  border: 1px solid rgba(251,191,36,.35);
+  background: rgba(251,191,36,.08);
+  color: #FDE68A;
+  font-size: 13.5px;
+  margin-bottom: 16px;
+}
+.alert-box.ok { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.08); color: #A7F3D0; }
+.alert-box.danger { border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.08); color: #FECDD3; }
+
+textarea {
+  background: rgba(0,0,0,.25);
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 9px;
+  font-family: var(--sans);
+  width: 100%;
+  min-height: 110px;
+  outline: none;
+}
+textarea:focus { border-color: var(--accent); }
