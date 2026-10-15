@@ -7,10 +7,16 @@
   <p class="muted">پیام برای تمام کاربران ثبت‌شده‌ی ربات انتخابی ارسال می‌شود (با رعایت محدودیت نرخ تلگرام).</p>
 
   {% if result %}
-  <div class="alert-box {{ 'ok' if result.failed == 0 else 'danger' }}">
-    ✅ ارسال شد به {{ result.sent }} نفر از {{ result.total }} کاربر
-    {% if result.failed %}— {{ result.failed }} مورد ناموفق (مسدود کردن ربات توسط کاربر یا آیدی نامعتبر){% endif %}
-  </div>
+    {% if result.scheduled %}
+    <div class="alert-box ok">
+      🕒 زمان‌بندی شد — این پیام در {{ result.send_at.strftime('%Y-%m-%d %H:%M') }} UTC ارسال خواهد شد.
+    </div>
+    {% else %}
+    <div class="alert-box {{ 'ok' if result.failed == 0 else 'danger' }}">
+      ✅ ارسال شد به {{ result.sent }} نفر از {{ result.total }} کاربر
+      {% if result.failed %}— {{ result.failed }} مورد ناموفق (مسدود کردن ربات توسط کاربر یا آیدی نامعتبر){% endif %}
+    </div>
+    {% endif %}
   {% endif %}
 
   <form method="post" action="/admin/broadcast">
@@ -22,10 +28,33 @@
     </select>
     <label>متن پیام</label>
     <textarea name="message" rows="6" required style="width:100%; background:var(--bg); color:var(--text); border:1px solid var(--panel-border); border-radius:8px; padding:10px; font-family:var(--sans);"></textarea>
+    <label>زمان‌بندی ارسال (اختیاری — به‌وقت UTC؛ خالی بگذارید برای ارسال فوری)</label>
+    <input type="datetime-local" name="send_at">
     <div style="margin-top:14px;">
-      <button type="submit" onclick="return confirm('مطمئن هستید؟ این پیام برای همه‌ی کاربران این ربات ارسال می‌شود.');">ارسال همگانی</button>
+      <button type="submit" onclick="return confirm('مطمئن هستید؟');">ارسال / زمان‌بندی</button>
     </div>
   </form>
+</div>
+
+<div class="panel">
+  <h3>پیام‌های زمان‌بندی‌شده‌ی در انتظار</h3>
+  <table>
+    <tr><th>ربات</th><th>زمان ارسال (UTC)</th><th>متن</th><th></th></tr>
+    {% for sb in pending %}
+    <tr>
+      <td>{{ bot_labels.get(sb.bot_id, sb.bot_id) }}</td>
+      <td class="mono">{{ sb.send_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td>{{ sb.message[:60] }}{{ '…' if sb.message|length > 60 else '' }}</td>
+      <td>
+        <form class="inline" method="post" action="/admin/broadcast/scheduled/{{ sb.id }}/cancel" onsubmit="return confirm('لغو شود؟');">
+          <button class="danger" type="submit">لغو</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">پیام زمان‌بندی‌شده‌ای در انتظار نیست.</td></tr>
+    {% endfor %}
+  </table>
 </div>
 
 {% endblock %}

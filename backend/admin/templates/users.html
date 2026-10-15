@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}کاربران پنل{% endblock %}
+{% block content %}
+
+<div class="panel">
+  <h2>👤 کاربران پنل مدیریت</h2>
+  <p class="muted">هر حساب یک نقش دارد: مدیر کل (دسترسی کامل)، مدیر مالی (کیف‌پول/رسید/قیمت)، پشتیبان (مشاهده و عملیات غیرمالی)، یا فقط‌مشاهده.</p>
+  <table>
+    <tr><th>نام کاربری</th><th>نقش</th><th>وضعیت</th><th></th></tr>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.username }}</td>
+      <td><span class="badge">{{ u.role }}</span></td>
+      <td><span class="badge {{ 'ok' if u.is_active else 'off' }}">{{ 'فعال' if u.is_active else 'غیرفعال' }}</span></td>
+      <td>
+        <form class="inline" method="post" action="/admin/users/{{ u.id }}/toggle-active">
+          <button class="secondary small" type="submit">{{ 'غیرفعال کردن' if u.is_active else 'فعال کردن' }}</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="panel">
+  <h3>ساخت حساب جدید</h3>
+  <form method="post" action="/admin/users/new">
+    <label>نام کاربری</label>
+    <input type="text" name="username" required>
+    <label>رمز عبور</label>
+    <input type="password" name="password" required>
+    <label>نقش</label>
+    <select name="role">
+      {% for r in roles %}
+      <option value="{{ r.value }}">{{ r.value }}</option>
+      {% endfor %}
+    </select>
+    <div style="margin-top:14px;"><button type="submit">ساخت حساب</button></div>
+  </form>
+</div>
+
+{% endblock %}

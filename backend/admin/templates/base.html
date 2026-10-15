@@ -10,12 +10,16 @@
     <div class="brand">پنل مدیریت فروش VPN
       <small>Connectix Reseller Platform</small>
     </div>
-    {% if request.session.get('logged_in') %}
+    {% if request.session.get('admin_user_id') %}
     <nav class="topnav">
       <a href="/admin">داشبورد</a>
       <a href="/admin/orders">سفارش‌ها</a>
       <a href="/admin/broadcast">پیام همگانی</a>
       <a href="/admin/suppliers">تأمین‌کننده</a>
+      <a href="/admin/audit-log">لاگ حسابرسی</a>
+      {% if request.session.get('admin_role') == 'super_admin' %}
+      <a href="/admin/users">کاربران پنل</a>
+      {% endif %}
       <a href="/admin/logout" class="logout-link">خروج</a>
     </nav>
     {% endif %}

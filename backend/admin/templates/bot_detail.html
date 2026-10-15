@@ -153,6 +153,20 @@
     <input type="number" step="1" name="referral_bonus_amount" value="{{ "%.0f"|format(bot.referral_bonus_amount) }}">
     <label>متن تماس پشتیبانی (مثل @AdminSupport)</label>
     <input type="text" name="support_contact" value="{{ bot.support_contact }}">
+
+    <label>سطح نمایندگی</label>
+    <select name="tier">
+      {% for value, label_fa in tier_labels.items() %}
+      <option value="{{ value }}" {{ 'selected' if bot.tier == value else '' }}>{{ label_fa }}</option>
+      {% endfor %}
+    </select>
+    <label>درصد تخفیف این سطح روی قیمت تمام‌شده (۰ تا ۱۰۰)</label>
+    <input type="number" step="0.1" min="0" max="100" name="tier_discount_percent" value="{{ bot.tier_discount_percent }}">
+    <label>سقف اعتبار / بدهی مجاز (تومان — کیف‌پول می‌تواند تا این مقدار منفی شود)</label>
+    <input type="number" step="1" min="0" name="credit_limit" value="{{ "%.0f"|format(bot.credit_limit) }}">
+    <label>سقف تعداد زیرنماینده‌ی مجاز (خالی = نامحدود)</label>
+    <input type="number" step="1" min="0" name="max_sub_bots" value="{{ bot.max_sub_bots if bot.max_sub_bots is not none else '' }}">
+
     <div style="margin-top:14px;"><button type="submit">ذخیره‌ی تنظیمات</button></div>
   </form>
 </div>

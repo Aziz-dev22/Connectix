@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}لاگ حسابرسی{% endblock %}
+{% block content %}
+
+<div class="panel">
+  <h2>🧾 لاگ حسابرسی عملیات مدیریتی/مالی</h2>
+  <p class="muted">هر تغییر قیمت، تایید/رد رسید، شارژ یا کسر کیف‌پول، ساخت ربات و تغییر تنظیمات این‌جا ثبت می‌شود — قابل حذف یا ویرایش نیست.</p>
+
+  <form method="get" action="/admin/audit-log" class="filter-bar">
+    <div>
+      <label>ربات</label>
+      <select name="bot_id">
+        <option value="">همه‌ی ربات‌ها</option>
+        {% for b in bots %}
+        <option value="{{ b.id }}" {{ 'selected' if filter_bot_id == b.id|string else '' }}>{{ b.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>نوع عملیات</label>
+      <select name="action">
+        <option value="">همه</option>
+        {% for a in distinct_actions %}
+        <option value="{{ a }}" {{ 'selected' if filter_action == a else '' }}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="flex:0;">
+      <button type="submit">فیلتر</button>
+    </div>
+  </form>
+</div>
+
+<div class="panel">
+  <table>
+    <tr><th>تاریخ</th><th>انجام‌دهنده</th><th>عملیات</th><th>ربات</th><th>جزئیات</th></tr>
+    {% for log in logs %}
+    <tr>
+      <td class="mono">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+      <td class="kv">{{ log.actor }}</td>
+      <td><span class="badge">{{ log.action }}</span></td>
+      <td>{{ bot_labels.get(log.bot_id, '—') }}</td>
+      <td class="muted" style="font-size:12px;">{{ log.detail }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">هنوز رکوردی ثبت نشده.</td></tr>
+    {% endfor %}
+  </table>
+  <p class="muted" style="margin-top:10px;">حداکثر ۳۰۰ رکورد آخر نمایش داده می‌شود.</p>
+</div>
+
+{% endblock %}
