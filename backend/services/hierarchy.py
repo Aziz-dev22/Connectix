@@ -13,6 +13,15 @@ class PermissionDeniedError(Exception):
     pass
 
 
+class SubBotLimitReachedError(Exception):
+    pass
+
+
+def count_children(session: Session, bot: Bot) -> int:
+    from sqlmodel import select
+    return len(session.exec(select(Bot).where(Bot.parent_bot_id == bot.id)).all())
+
+
 def create_bot(
     session: Session,
     telegram_token: str,
@@ -63,6 +72,10 @@ def create_sub_reseller_bot(
     if not has_permission(session, parent_bot, requesting_telegram_id):
         raise PermissionDeniedError(
             "شما اجازه‌ی ساخت ربات نمایندگی ندارید. ابتدا باید از منوی «نمایندگی» درخواست بدهید و تایید شود."
+        )
+    if parent_bot.max_sub_bots is not None and count_children(session, parent_bot) >= parent_bot.max_sub_bots:
+        raise SubBotLimitReachedError(
+            f"سقف تعداد زیرنماینده‌ی مجاز ({parent_bot.max_sub_bots}) پر شده است."
         )
     return create_bot(
         session,

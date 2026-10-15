@@ -35,9 +35,10 @@ def deduct_for_order(
     (که والد ندارد) هیچ کاری نمی‌کند، چون هزینه مستقیماً از حساب خودش کسر می‌شود."""
     if bot.parent_bot_id is None:
         return None
-    if bot.wallet_balance < amount:
+    # اگر credit_limit تنظیم شده باشد، موجودی مجاز است تا همان مقدار منفی شود (اعتبار/بدهی مجاز)
+    if bot.wallet_balance - amount < -bot.credit_limit:
         raise InsufficientBalanceError(
-            f"موجودی کافی نیست: موجودی {bot.wallet_balance}, هزینه‌ی لازم {amount}"
+            f"موجودی/اعتبار کافی نیست: موجودی {bot.wallet_balance}، سقف اعتبار {bot.credit_limit}، هزینه‌ی لازم {amount}"
         )
     bot.wallet_balance -= amount
     session.add(bot)

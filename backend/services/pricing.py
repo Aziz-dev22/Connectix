@@ -63,16 +63,22 @@ async def sync_plans_from_connectix(session: Session) -> list[Plan]:
 
 def get_cost_price(session: Session, bot: Bot, plan_id: str) -> float:
     """قیمت تمام‌شده‌ی یک پلن برای یک ربات مشخص: اگر ریشه است، قیمت فروش خود
-    Connectix؛ در غیر این صورت قیمت فروشی که والدش برای همین پلن تعیین کرده."""
+    Connectix؛ در غیر این صورت قیمت فروشی که والدش برای همین پلن تعیین کرده —
+    که بعد از آن، درصد تخفیف سطح نمایندگیِ همین ربات (tier_discount_percent)
+    رویش اعمال می‌شود (قیمت خرید اختصاصی هر نماینده بر اساس سطحش)."""
     if bot.parent_bot_id is None:
         plan = session.get(Plan, plan_id)
-        return plan.connectix_sell_price if plan else 0
-    parent_pricing = session.exec(
-        select(PlanPricing).where(
-            PlanPricing.bot_id == bot.parent_bot_id, PlanPricing.plan_id == plan_id
-        )
-    ).first()
-    return parent_pricing.sell_price if parent_pricing else 0
+        base = plan.connectix_sell_price if plan else 0
+    else:
+        parent_pricing = session.exec(
+            select(PlanPricing).where(
+                PlanPricing.bot_id == bot.parent_bot_id, PlanPricing.plan_id == plan_id
+            )
+        ).first()
+        base = parent_pricing.sell_price if parent_pricing else 0
+
+    discount = max(0, min(100, bot.tier_discount_percent or 0))
+    return base * (1 - discount / 100)
 
 
 def ensure_plan_pricing_rows(session: Session, bot: Bot) -> None:
